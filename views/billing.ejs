@@ -1,0 +1,69 @@
+<div class="container mt-4">
+    <h2>Billing Records</h2>
+
+    <% if (messages && messages.length > 0) { %>
+        <div class="alert alert-success"><%= messages %></div>
+    <% } %>
+    <% if (errors && errors.length > 0) { %>
+        <div class="alert alert-danger"><%= errors %></div>
+    <% } %>
+
+    <!-- Filter Form -->
+    <form method="get" action="/billing" class="row g-3 mb-4">
+        <div class="col-md-3">
+            <input type="number" name="month" class="form-control" placeholder="Month (1-12)" value="<%= typeof query !== 'undefined' ? query.month : '' %>">
+        </div>
+        <div class="col-md-3">
+            <input type="number" name="year" class="form-control" placeholder="Year (e.g., 2025)" value="<%= typeof query !== 'undefined' ? query.year : '' %>">
+        </div>
+        <div class="col-md-3">
+            <button type="submit" class="btn btn-primary">Filter</button>
+        </div>
+    </form>
+
+    <% if (user.role === 'admin' || user.role === 'finance') { %>
+        <a href="/billing/add" class="btn btn-success mb-3">+ Add Billing</a>
+    <% } %>
+
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Member ID</th>
+                <th>Price</th>
+                <th>Description</th>
+                <th>Payment Method</th>
+                <th>Payment Date</th>
+                <% if (user.role === 'admin' || user.role === 'finance') { %>
+                    <th>Actions</th>
+                <% } %>
+            </tr>
+        </thead>
+        <tbody>
+            <% if (billings.length === 0) { %>
+                <tr>
+                    <td colspan="7" class="text-center">No billing records found.</td>
+                </tr>
+            <% } %>
+            <% billings.forEach(bill => { %>
+                <tr>
+                    <td><%= bill.billing_id %></td>
+                    <td><%= bill.member_id %></td>
+                    <td>$<%= parseFloat(bill.price).toFixed(2) %></td>
+                    <td><%= bill.description %></td>
+                    <td><%= bill.payment_method %></td>
+                    <td><%= bill.payment_date ? bill.payment_date.toISOString().split('T')[0] : 'N/A' %></td>
+                    <td><%= bill.status %></td>
+                    <% if (user.role === 'admin' || user.role === 'finance') { %>
+                        <td>
+                            <a href="/billing/edit/<%= bill.billing_id %>" class="btn btn-sm btn-warning">Edit</a>
+                            <form action="/billing/delete/<%= bill.billing_id %>" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this billing record?');">
+                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                            </form>
+                        </td>
+                    <% } %>
+                </tr>
+            <% }) %>
+        </tbody>
+    </table>
+</div>

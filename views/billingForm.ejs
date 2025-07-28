@@ -1,0 +1,71 @@
+
+      <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="/">Fitness</a>
+      <div class="collapse navbar-collapse">
+        <ul class="navbar-nav ms-auto">
+          <% if (!user) { %>
+            <li class="nav-item"><a class="nav-link" href="/classView">class</a></li>
+            <li class="nav-item"><a class="nav-link" href="/billing">billing</a></li>
+            <li class="nav-item"><a class="nav-link" href="/rooms">room</a></li>
+            <li class="nav-item"><a class="nav-link" href="/loc">location</a></li>
+            <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
+          <% } else { %>
+            <li class="nav-item"><a class="nav-link" href="/classView">class</a></li>
+            <li class="nav-item"><a class="nav-link" href="/billing">billing</a></li>
+            <li class="nav-item"><a class="nav-link" href="/rooms">room</a></li>
+            <li class="nav-item"><a class="nav-link" href="/loc">location</a></li>
+            <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
+            <li class="nav-item"><a class="nav-link" href="/dashboard">Dashboard</a></li>
+          <% } %>
+        </ul>
+      </div>
+    </div>
+  </nav>
+<div class="container mt-4">
+    <h2><%= billing ? 'Edit Billing Record' : 'Add New Billing' %></h2>
+
+    <form method="POST" action="<%= billing ? '/billing/edit/' + billing.billing_id : '/billing/add' %>">
+        <div class="mb-3">
+            <label for="member_id" class="form-label">Member ID</label>
+            <input type="number" name="member_id" id="member_id" class="form-control" required
+                value="<%= billing ? billing.member_id : '' %>">
+        </div>
+
+        <div class="mb-3">
+            <label for="price" class="form-label">Price</label>
+            <input type="number" name="price" id="price" class="form-control" step="0.01" required
+                value="<%= billing ? billing.price : '' %>">
+        </div>
+
+        <div class="mb-3">
+            <label for="desc" class="form-label">Description</label>
+            <textarea name="description" id="description" class="form-control" rows="2"><%= billing ? billing.description : '' %></textarea>
+        </div>
+
+        <div class="mb-3">
+            <label for="payment_method" class="form-label">Payment Method</label>
+            <select name="payment_method" id="payment_method" class="form-select" required>
+                <option value="">--Select--</option>
+                <option value="Cash" <%= billing && billing.payment_method === 'Cash' ? 'selected' : '' %>>Cash</option>
+                <option value="Card" <%= billing && billing.payment_method === 'Card' ? 'selected' : '' %>>Card</option>
+                <option value="Transfer" <%= billing && billing.payment_method === 'Transfer' ? 'selected' : '' %>>Transfer</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="payment_date" class="form-label">Payment Date</label>
+            <input type="date" name="payment_date" id="payment_date" class="form-control"
+                value="<%= billing && billing.payment_date ? billing.payment_date.toISOString().split('T')[0] : '' %>">
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+            <%= billing ? 'Update Billing' : 'Create Billing' %>
+        </button>
+        <a href="/billing" class="btn btn-secondary">Cancel</a>
+    </form>
+<<<<<<< HEAD
+</div>
+=======
+</div>
+>>>>>>> 67ad11fb88ef6af8cc9d817b92bd247643521a7e
