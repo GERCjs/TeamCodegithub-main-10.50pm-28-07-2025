@@ -30,35 +30,48 @@
   </nav>
 <div class="container mt-5">
   <h2>Welcome, <%= user.memberName %>!</h2>
-  <% if (user.role === 'admin') { %>
-    <h4>All Members</h4>
-    <table class="table table-bordered">
-      <thead class="table-light">
-        <tr><th>ID</th><th>Name</th><th>Email</th><th>Address</th><th>Phone</th><th>Edit</th><th>Delete</th></tr>
-      </thead>
-      <tbody>
-        <% members.forEach(member => { %>
-          <tr>
-            <td><%= member.memberID %></td>
-            <td><%= member.memberName %></td>
-            <td><%= member.email %></td>
-            <td><%= member.address %></td>
-            <td><%= member.phone %></td>
-            <td>
-              <a href="/members/edit/<%= member.memberID %>" class="btn btn-warning btn-sm">Edit</a>
-            </td>
-            <td>
-                
-              <form method="POST" action="/members/delete/<%= member.memberID %>">
-                <button class="btn btn-danger btn-sm" onclick="return confirm('Delete this member?')">Delete</button>
-              </form>
-               
-            </td>
 
-          </tr>
-        <% }) %>
-      </tbody>
-    </table>
+  <% if (user.role === 'admin') { %>
+    <form class="row g-3 mt-3" method="GET" action="/dashboard">
+      <div class="col-auto">
+        <input type="text" name="keyword" class="form-control" placeholder="Search by Name or ID" value="<%= keyword || '' %>">
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary mb-3">Search</button>
+      </div>
+    </form>
+    <div class="mb-3">
+      <a href="/members" class="btn btn-info me-2">View All Members Details</a>
+      <a href="/members/new" class="btn btn-success">Add New Member</a>
+    </div>
+
+
+    <% if (members.length > 0) { %>
+      <h4>All Members</h4>
+      <table class="table table-bordered">
+        <thead class="table-light">
+          <tr><th>ID</th><th>Name</th><th>Edit</th><th>Delete</th></tr>
+        </thead>
+        <tbody>
+          <% members.forEach(member => { %>
+            <tr>
+              <td><%= member.memberID %></td>
+              <td><%= member.memberName %></td>
+      
+              <td><a href="/members/edit/<%= member.memberID %>" class="btn btn-warning btn-sm">Edit</a></td>
+              <td>
+                <form method="POST" action="/members/delete/<%= member.memberID %>">
+                  <button class="btn btn-danger btn-sm" onclick="return confirm('Delete this member?')">Delete</button>
+                </form>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    <% } else { %>
+      <p class="text-danger">The member is not registered.</p>
+    <% } %>
+
   <% } else { %>
     <h4>Your Information</h4>
     <p>ID: <%= members[0].memberID %></p>
@@ -67,6 +80,7 @@
     <p>Address: <%= members[0].address %></p>
     <p>Phone: <%= members[0].phone %></p>
   <% } %>
+
   <a href="/" class="btn btn-secondary">Back to Home</a>
 </div>
 </body>

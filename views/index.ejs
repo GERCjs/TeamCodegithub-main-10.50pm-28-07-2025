@@ -28,42 +28,20 @@
       </div>
     </div>
   </nav>
+  <body style="background-image: url('https://img.freepik.com/premium-photo/contemporary-spotless-fitness-gym-center-interiorgenerative-ai_391052-10889.jpg?w=2000'); 
+             background-size: cover; 
+             background-repeat: no-repeat; 
+             background-attachment: fixed; 
+             background-position: center; 
+             color: white;">
 
-  <div class="container mt-4">
-    <% if (messages.length > 0) { %>
-      <div class="alert alert-success"><%= messages[0] %></div>
-    <% } %>
-    <% if (errors.length > 0) { %>
-      <div class="alert alert-danger"><%= errors[0] %></div>
-    <% } %>
 
-    <form method="GET" action="/" class="mb-3">
-      <div class="input-group">
-        <input type="text" name="keyword" class="form-control" placeholder="Search by Member Name or ID">
-        <button class="btn btn-primary">Search</button>
-      </div>
-    </form>
-
-    <% if (members.length > 0) { %>
-      <table class="table table-bordered">
-        <thead class="table-light">
-          <tr>
-            <th>ID</th>
-            <th>Name</th>
-            
-          </tr>
-        </thead>
-        <tbody>
-          <% members.forEach(member => { %>
-            <tr>
-              <td><%= member.memberID %></td>
-              <td><%= member.memberName %></td>
-              
-            </tr>
-          <% }) %>
-        </tbody>
-      </table>
-    <% } %>
+  <div style="background-color: rgba(0,0,0,0.6); padding: 30px; border-radius: 12px; text-align: center;">
+    <h1>Welcome to the Fitness App</h1>
+    <p> <a href="/login" style="color: yellow;">Get Started</a></p>
   </div>
+</body>
+
+  
 </body>
 </html>

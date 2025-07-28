@@ -73,7 +73,8 @@ app.get('/', (req, res) => {
             user: req.session.user,
             members: results,
             messages: req.flash('success'),
-            errors: req.flash('error')
+            errors: req.flash('error'),
+            keyword
         });
     });
 });
@@ -137,15 +138,27 @@ app.get('/logout', (req, res) => {
 
 // Dashboard
 app.get('/dashboard', checkAuthenticated, (req, res) => {
+    const keyword = req.query.keyword || '';
     const sql = req.session.user.role === 'admin'
-        ? 'SELECT * FROM members'
+        ? (keyword
+            ? 'SELECT * FROM members WHERE memberName LIKE ? OR memberID = ?'
+            : 'SELECT * FROM members')
         : 'SELECT * FROM members WHERE memberID = ?';
-    const params = req.session.user.role === 'admin' ? [] : [req.session.user.memberID];
+
+    const params = req.session.user.role === 'admin'
+        ? (keyword ? [`%${keyword}%`, keyword] : [])
+        : [req.session.user.memberID];
+
     connection.query(sql, params, (err, results) => {
         if (err) throw err;
-        res.render('dashboard', { user: req.session.user, members: results });
-    });
-});
+        res.render('dashboard', {
+            user: req.session.user,
+            members: results,
+            keyword // this must be passed to avoid "keyword is not defined" error in EJS
+        });
+    }); 
+}); 
+
 
 // Edit member (login required)
 app.get('/members/edit/:id', checkAuthenticated, (req, res) => {
@@ -181,6 +194,42 @@ app.get('/members', checkAuthenticated, (req, res) => {
     connection.query('SELECT * FROM members', (err, results) => {
         if (err) throw err;
         res.render('memberList', { user: req.session.user, members: results });
+    });
+});
+// Show form to create a new member (admin only)
+app.get('/members/new', checkAuthenticated, checkAdmin, (req, res) => {
+    res.render('newmember', {
+        user: req.session.user,
+        messages: req.flash('error'),
+        formData: req.flash('formData')[0] || {}
+    });
+});
+
+// Handle new member submission (admin only)
+app.post('/members/new', checkAuthenticated, checkAdmin, (req, res) => {
+    const { memberName, email, password, address, phone, role } = req.body;
+
+    if (!memberName || !email || !password || !address || !phone || !role) {
+        req.flash('error', 'All fields are required.');
+        req.flash('formData', req.body);
+        return res.redirect('/members/new');
+    }
+
+    if (password.length < 6) {
+        req.flash('error', 'Password must be at least 6 characters.');
+        req.flash('formData', req.body);
+        return res.redirect('/members/new');
+    }
+
+    const sql = 'INSERT INTO members (memberName, email, password, address, phone, role) VALUES (?, ?, SHA1(?), ?, ?, ?)';
+    connection.query(sql, [memberName, email, password, address, phone, role], err => {
+        if (err) {
+            req.flash('error', 'Email exists or DB error.');
+            req.flash('formData', req.body);
+            return res.redirect('/members/new');
+        }
+        req.flash('success', 'New member added.');
+        res.redirect('/dashboard');
     });
 });
 
@@ -327,7 +376,7 @@ app.get('/addClass', checkAuthenticated, checkAdmin, (req, res) => {
 // Add class POST
 app.post('/addClass', checkAuthenticated, checkAdmin, (req, res) => {
     const { className, description, startTime, endTime, price ,location} = req.body;
-    const sql = 'INSERT INTO classT (className, description, startTime, endTime, price,location ) VALUES (?, ?, ?, ?, ?)';
+    const sql = 'INSERT INTO classT (className, description, startTime, endTime, price,location ) VALUES (?, ?, ?, ?, ?,?)';
     connection.query(sql, [className, description, startTime, endTime, price,location ], err => {
         if (err) {
             console.error('Error adding class:', err);
@@ -366,7 +415,7 @@ app.get('/editClass/:id', checkAuthenticated, checkAdmin, (req, res) => {
 app.post('/editClass/:id', checkAuthenticated, checkAdmin, (req, res) => {
     const classID = req.params.id;
     const { className, description, startTime, endTime, price } = req.body;
-    const sql = 'UPDATE classT SET className = ?, description = ?, startTime = ?, endTime = ?, price = ? = ? WHERE classID = ?';
+    const sql = 'UPDATE classT SET className = ?, description = ?, startTime = ?, endTime = ?, price = ? WHERE classID = ?';
     connection.query(sql, [className, description, startTime, endTime, price, classID], (error, results) => {
         if (error) {
             console.error('Error updating class:', error);
@@ -418,7 +467,6 @@ app.post('/addRoom', checkAuthenticated, checkAdmin, (req, res) => {
 });
 
 // Update Room GET
-// Update Room GET - with better error handling
 app.get('/rooms/update/:id', checkAuthenticated, checkAdmin, (req, res) => {
   const sql = 'SELECT * FROM room WHERE roomID = ?';
   connection.query(sql, [req.params.id], (err, result) => {
@@ -478,7 +526,10 @@ app.get('/rooms/delete/:id', checkAuthenticated, checkAdmin, (req, res) => {
     });
 });
 /***********************************************************/
+
+
 //billing
+
 app.get('/billing', checkAuthenticated, (req, res) => {
     const month = req.query.month;
     const year = req.query.year;
@@ -502,13 +553,16 @@ app.get('/billing', checkAuthenticated, (req, res) => {
     });
 });
 
+app.get('/billings', (req, res) => {
+    res.redirect('/billing');
+});
 
-/** Render Add Billing Form (admin only) */
+// Add Billing Form (admin only)
 app.get('/billing/add', checkAuthenticated, checkAdmin, (req, res) => {
     res.render('billingForm', { billing: null });
 });
 
-/** Handle Add Billing */
+// Handle Add Billing POST (admin only)
 app.post('/billing/add', checkAuthenticated, checkAdmin, (req, res) => {
     const { member_id, price, description, payment_date, payment_method, status } = req.body;
     const sql = 'INSERT INTO billing (member_id, price, description, payment_date, payment_method, status) VALUES (?, ?, ?, ?, ?, ?)';
@@ -519,9 +573,11 @@ app.post('/billing/add', checkAuthenticated, checkAdmin, (req, res) => {
     });
 });
 
-/** Render Edit Billing (admin) */
+// Render Edit Billing Form (admin only)
 app.get('/billing/edit/:id', checkAuthenticated, checkAdmin, (req, res) => {
-    connection.query('SELECT * FROM billing WHERE id = ?', [req.params.id], (err, results) => {
+    const sql = 'SELECT * FROM billing WHERE billing_id = ?';
+    connection.query(sql, [req.params.id], (err, results) => {
+        if (err) throw err;
         if (results.length === 0) {
             req.flash('error', 'Billing record not found.');
             return res.redirect('/billing');
@@ -530,33 +586,125 @@ app.get('/billing/edit/:id', checkAuthenticated, checkAdmin, (req, res) => {
     });
 });
 
-/** Handle Edit Billing (admin only) */
-app.put('/billing/:id', checkAuthenticated, checkAdmin, (req, res) => {
+// Handle Edit Billing POST (admin only)
+app.post('/billing/edit/:id', checkAuthenticated, checkAdmin, (req, res) => {
     const { member_id, price, description, payment_date, payment_method, status } = req.body;
-    const sql = 'UPDATE billing SET member_id=?, price=?, description=?, payment_date=?, payment_method=?, status=? WHERE id=?';
+    const sql = 'UPDATE billing SET member_id=?, price=?, description=?, payment_date=?, payment_method=?, status=? WHERE billing_id=?';
     connection.query(sql, [member_id, price, description, payment_date, payment_method, status, req.params.id], (err) => {
         if (err) throw err;
-        req.flash('success', 'Billing record updated.');
+        req.flash('success', 'Billing updated successfully.');
         res.redirect('/billing');
     });
 });
 
-// Delete billing record
-app.delete('/billing/:id', checkAuthenticated, checkAdmin, (req, res) => {
-    const sql = "DELETE FROM billing WHERE id = ?";
-    connection.query(sql, [req.params.id], (err) => {
-        if (err) {
-            req.flash('error', 'Failed to delete billing record.');
+// Confirm Delete Billing (admin only)
+app.get('/billing/delete/:id', checkAuthenticated, checkAdmin, (req, res) => {
+    const sql = 'SELECT * FROM billing WHERE billing_id = ?';
+    connection.query(sql, [req.params.id], (err, results) => {
+        if (err) throw err;
+        if (results.length === 0) {
+            req.flash('error', 'Billing record not found.');
             return res.redirect('/billing');
         }
-        req.flash('success', 'Billing record deleted.');
+        res.render('deleteBilling', { billing: results[0] });
+    });
+});
+
+// Handle Delete Billing POST (admin only)
+app.post('/billing/delete/:id', checkAuthenticated, checkAdmin, (req, res) => {
+    const sql = 'DELETE FROM billing WHERE billing_id = ?';
+    connection.query(sql, [req.params.id], (err) => {
+        if (err) throw err;
+        req.flash('success', 'Billing deleted.');
         res.redirect('/billing');
     });
 });
 
 
 /***********************/
+//booking 
+app.get('/book', (req, res) => {
+  const sql = "SELECT b.bookingID, m.name, m.memberID, c.className, b.booking_date, b.timeslot, b.status " +
+              "FROM bookings b " +
+              "JOIN members m ON b.memberID = m.memberID " +
+              "JOIN classes c ON b.classID = c.classID";
+  db.query(sql, (err, results) => {
+    if (err) throw err;
+    db.query('SELECT * FROM classes', (err, classes) => {
+      if (err) throw err;
+      res.render('book', { bookings: results, classes });
+    });
+  });
+});
 
+app.post('/book', (req, res) => {
+  const { name, memberID, classID, booking_date, timeslot } = req.body;
+  if (memberID) {
+    db.query(
+      'INSERT INTO bookings (memberID, classID, booking_date, timeslot) VALUES (?, ?, ?, ?)',
+      [memberID, classID, booking_date, timeslot],
+      err => {
+        if (err) throw err;
+        res.redirect('/book');
+      }
+    );
+  } else {
+    db.query('INSERT INTO members (name) VALUES (?)', [name], (err, result) => {
+      if (err) throw err;
+      const newMemberID = result.insertId;
+      db.query(
+        'INSERT INTO bookings (memberID, classID, booking_date, timeslot) VALUES (?, ?, ?, ?)',
+        [newMemberID, classID, booking_date, timeslot],
+        err => {
+          if (err) throw err;
+          res.redirect('/book');
+        }
+      );
+    });
+  }
+});
+
+app.post('/cancel/:id', (req, res) => {
+  db.query('UPDATE bookings SET status = "Cancelled" WHERE bookingID = ?', [req.params.id], err => {
+    if (err) throw err;
+    res.redirect('/book');
+  });
+});
+
+app.get('/edit/:id', (req, res) => {
+  const id = req.params.id;
+  db.query('SELECT * FROM classes', (err, classes) => {
+    if (err) throw err;
+    db.query(
+      "SELECT b.bookingID, m.name, c.classID, b.booking_date, b.timeslot " +
+      "FROM bookings b " +
+      "JOIN members m ON b.memberID = m.memberID " +
+      "JOIN classes c ON b.classID = c.classID " +
+      "WHERE b.bookingID = ?",
+      [id],
+      (err, result) => {
+        if (err) throw err;
+        res.render('edit', { booking: result[0], classes });
+      }
+    );
+  });
+});
+
+app.post('/edit/:id', (req, res) => {
+  const { classID, booking_date, timeslot } = req.body;
+  db.query(
+    'UPDATE bookings SET classID = ?, booking_date = ?, timeslot = ? WHERE bookingID = ?',
+    [classID, booking_date, timeslot, req.params.id],
+    err => {
+      if (err) throw err;
+      res.redirect('/');
+    }
+  );
+});
+
+//******************* */
 
 const PORT = process.env.PORT || 3307;
 app.listen(PORT, () => console.log(`Server running on port http://localhost:${PORT}/`));
+
+//test commit
